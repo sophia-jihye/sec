@@ -7,10 +7,11 @@ from bs4 import BeautifulSoup as bs
 from tqdm import tqdm
 tqdm.pandas()
 
-data_dir = '/media/dmlab/My Passport/DATA/sec'
-data_filepath = os.path.join(data_dir, 'Data_2022-03-10.csv')
+root_dir = '/media/dmlab/My Passport/DATA/sec'
+# root_dir = '/data/finetune/jihye_data/sec'
+data_filepath = os.path.join(root_dir, 'Data_2022-03-10.csv')
 
-save_filepath = os.path.join(data_dir, '10K_parsed.csv')
+save_filepath = os.path.join(root_dir, '10K_parsed.csv')
 
 headers = {
     "User-Agent": "Seoul National University jihyeparkk@snu.ac.kr",
@@ -34,7 +35,10 @@ def parse_10k_filing(link, section):
         text = " ".join(text)
         return(text)
     
-    def extract_text(text, item_start, item_end, median_item_length, min_item_length=7000):
+    def extract_text(text, item_start, item_end, median_item_length, min_item_length=2000):
+        if 'FORM 10-K/A'.upper() in text.upper():
+            return 'FORM 10-K/A!'
+        
         item_start = item_start
         item_end = item_end
         starts = [i.start() for i in item_start.finditer(text)]
@@ -55,30 +59,30 @@ def parse_10k_filing(link, section):
 
         item_text = text[item_position[0]:item_position[1]]
 
-        return(item_text)
+        return item_text
 
     text = get_text(link)
         
     if section == 1 or section == 0:
         try:
-            item1_start = re.compile("item[s]*\s*[1]\s*[\.\;\:\-\_]*\s*\\b", re.IGNORECASE)
-            item1_end = re.compile("item[s]*\s*1a\s*[\.\;\:\-\_]\s*Risk", re.IGNORECASE)
+            item1_start = re.compile("item[s]*\s*[1]\s*[\.\;\:\-\_\–]*\s*\\b", re.IGNORECASE)
+            item1_end = re.compile("item[s]*\s*1a\s*[\.\;\:\-\_\–]*\s*\\b", re.IGNORECASE)
             businessText = extract_text(text, item1_start, item1_end, 40000)
         except:
             businessText = "Something went wrong!"
         
     if section == 2 or section == 0:
         try:
-            item1a_start = re.compile("item[s]*\s*1a\s*[\.\;\:\-\_]\s*Risk", re.IGNORECASE)
-            item1a_end =re.compile("item[s]*\s*1b\s*[\.\;\:\-\_]\s*Unresolved", re.IGNORECASE)
+            item1a_start = re.compile("item[s]*\s*1a\s*[\.\;\:\-\_\–]*\s*\\b", re.IGNORECASE)
+            item1a_end = re.compile("item[s]*\s*1b\s*[\.\;\:\-\_\–]*\s*\\b|item[s]*\s*[2]\s*[\.\;\:\-\_\–]*\s*\\b", re.IGNORECASE)
             riskText = extract_text(text, item1a_start, item1a_end, 57000)
         except:
             riskText = "Something went wrong!"
             
     if section == 3 or section == 0:
         try:
-            item7_start = re.compile("item[s]*\s*[7]\s*[\.\;\:\-\_]*\s*\\bM", re.IGNORECASE)
-            item7_end = re.compile("item[s]*\s*7a\s*[\.\;\:\-\_]\sQuanti|item\s*8[\.\,\;\:\-\_]\s*", re.IGNORECASE)
+            item7_start = re.compile("item[s]*\s*[7]\s*[\.\;\:\-\_\–]*\s*\\b", re.IGNORECASE)
+            item7_end = re.compile("item[s]*\s*7a\s*[\.\;\:\-\_\–]*\s*\\b|item[s]*\s*[8]\s*[\.\;\:\-\_\–]*\s*\\b", re.IGNORECASE)
             mdaText = extract_text(text, item7_start, item7_end, 75000)
         except:
             mdaText = "Something went wrong!"
