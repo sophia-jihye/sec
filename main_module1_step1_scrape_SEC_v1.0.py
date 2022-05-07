@@ -11,8 +11,7 @@ data_dir = '/media/dmlab/My Passport/DATA/sec'
 sp500_filepath = os.path.join(data_dir, '2022-03-02_S&P500_List.csv')
 start_date, end_date = '2020-01-01', '2022-09-01'
 
-save_filepath = os.path.join(data_dir, 'Data_2022-03-10.csv')
-err_filepath = save_filepath.replace('.csv', '_error.csv')
+save_filepath_format = os.path.join(data_dir, 'Scraped_2022-03-10_{}.csv')
 
 headers = {
     "User-Agent": "Seoul National University jihyeparkk@snu.ac.kr",
@@ -33,12 +32,17 @@ def clean_content(content):
     content = MULTIPLE_SPACES.sub(" ", content).strip()
     return content
 
+def is_amendment(text):
+    if 'FORM 10-K/A'.upper() in text.upper():
+        return True
+    else:
+        return False
+
 def get_image_urls(soup, base_url):
     return ['{}/{}'.format(base_url,item['src']) for item in soup.select('img')]
-
+    
 if __name__ == '__main__':
     form_type = "10-K"
-    
     
     df = pd.read_csv(sp500_filepath)[['Symbol', 'Security', 'CIK']]
     df.columns = ['Ticker', 'CompanyName', 'CIK']
@@ -73,15 +77,24 @@ if __name__ == '__main__':
                 soup = get_soup(form_url)
                 texts_only = soup.get_text()
                 texts_only = clean_content(texts_only)
+                
+                # Ignore Form 10-K/A (amendment) files
+                if is_amendment(texts_only):
+                    continue
+                
                 image_urls = get_image_urls(soup, os.path.dirname(form_url))
 
                 records.append((cik, ticker, company_name, form_type, filing_date, period_of_report, texts_only, image_urls, files_url, form_url))
 
     df = pd.DataFrame(records, columns=['CIK', 'Ticker', 'CompanyName', 'form_type', 'filing_date', 'period_of_report', 'texts_only', 'image_urls', 'files_url', 'form_url'])
+    
+    save_filepath = save_filepath_format.format(len(df))
     df.to_csv(save_filepath, index=False)
     print('Created {}'.format(save_filepath))
     
     df = pd.DataFrame(err_records, columns=['CIK', 'url'])
+    
+    err_filepath = save_filepath.replace('.csv', '_error.csv')
     df.to_csv(err_filepath, index=False)
     print('Created {}'.format(err_filepath))
     
